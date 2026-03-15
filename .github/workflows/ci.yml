@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - run: npm install
       - run: npm run lint
 
@@ -30,6 +31,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - run: npm install
       - run: npm test
 
@@ -41,6 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
       - run: npm install
       - run: npm audit --audit-level=critical
 
@@ -73,12 +76,14 @@ jobs:
           context: .
           push: false
           load: true
-          tags: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+          tags: |
+            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
+            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+          image-ref: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
           format: table
           exit-code: 1
           ignore-unfixed: true
@@ -89,7 +94,9 @@ jobs:
         with:
           context: .
           push: true
-          tags: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+          tags: |
+            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
+            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
 
   deploy:
     name: Deploy to Cloud Run
