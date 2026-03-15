@@ -56,7 +56,24 @@ jobs:
       - name: Authenticate Docker to Artifact Registry
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
-      - name: Build and push Docker image
+      - name: Build Docker image (local)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+          format: table
+          exit-code: 1
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
+      - name: Push Docker image to Artifact Registry
         uses: docker/build-push-action@v5
         with:
           context: .
