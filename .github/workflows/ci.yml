@@ -38,15 +38,18 @@ jobs:
   sonarqube:
     name: SonarQube Analysis
     runs-on: self-hosted
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Run SonarQube Scanner
         run: |
+          mkdir -p $HOME/.sonar/cache
           docker run --rm \
             --network=host \
             -v "$(pwd):/usr/src" \
+            -v "$HOME/.sonar/cache:/opt/sonar-scanner/.sonar/cache" \
             sonarsource/sonar-scanner-cli \
             -Dsonar.projectKey=4you-github \
             -Dsonar.sources=. \
