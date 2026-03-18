@@ -1,3 +1,5 @@
+name: monitoring-github
+
 services:
   # Stackdriver exporter: pulls GCP Cloud Run metrics into Prometheus
   stackdriver-exporter:
@@ -6,13 +8,12 @@ services:
       - GOOGLE_APPLICATION_CREDENTIALS=/credentials/gcp-key.json
       - GOOGLE_PROJECT_ID=sahar-pfe
     volumes:
-      - /home/sahar/gcp-key.json:/credentials/gcp-key.json:ro
+      - /home/sahar/gcp-key-github.json:/credentials/gcp-key.json:ro
     ports:
       - "9255:9255"
     command:
       - "--google.project-id=sahar-pfe"
-      - "--monitoring.metrics-type-prefixes=run.googleapis.com
-      - "--monitoring.collector.fill-missing-labels"
+      - "--monitoring.metrics-type-prefixes=run.googleapis.com"
       - "--monitoring.drop-delegated-projects"
     restart: unless-stopped
 
@@ -46,6 +47,21 @@ services:
     depends_on:
       - prometheus
 
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube-github
+    mem_limit: 2g
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+    restart: unless-stopped
+
 volumes:
   prometheus_data:
   grafana_data:
+  sonarqube_data:
+  sonarqube_logs:

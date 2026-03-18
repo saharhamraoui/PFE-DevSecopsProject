@@ -19,6 +19,13 @@ resource "google_project_iam_member" "cloud_run_admin" {
   member  = "serviceAccount:${google_service_account.deployer.email}"
 }
 
+# Grant Monitoring Viewer access (for Stackdriver exporter)
+resource "google_project_iam_member" "monitoring_viewer" {
+  project = var.project_id
+  role    = "roles/monitoring.viewer"
+  member  = "serviceAccount:${google_service_account.deployer.email}"
+}
+
 # Grant service account user on default compute SA (required by Cloud Run)
 resource "google_service_account_iam_member" "act_as_compute" {
   service_account_id = "projects/${var.project_id}/serviceAccounts/${var.project_number}-compute@developer.gserviceaccount.com"

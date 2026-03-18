@@ -35,6 +35,25 @@ jobs:
       - run: npm install
       - run: npm test
 
+  sonarqube:
+    name: SonarQube Analysis
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run SonarQube Scanner
+        run: |
+          docker run --rm \
+            --network=host \
+            -v "$(pwd):/usr/src" \
+            sonarsource/sonar-scanner-cli \
+            -Dsonar.projectKey=4you-github \
+            -Dsonar.sources=. \
+            -Dsonar.exclusions="node_modules/**,dist/**,**/*.test.ts" \
+            -Dsonar.host.url=http://localhost:9000 \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+
   security:
     name: Security scan
     runs-on: ubuntu-latest

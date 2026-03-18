@@ -11,7 +11,7 @@ scrape_configs:
   # Scrape GCP Cloud Run metrics via stackdriver_exporter
   - job_name: cloud_run
     static_configs:
-      - targets: ["stackdriver-exporter:9255"]
+      - targets: ["172.17.0.1:9255"]
     metrics_path: /metrics
     params:
       google.project-id: ["sahar-pfe"]
