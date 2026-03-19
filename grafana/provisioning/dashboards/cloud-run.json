@@ -1,0 +1,412 @@
+{
+  "title": "Cloud Run - my-app",
+  "uid": "cloud-run-dashboard",
+  "description": "Monitoring dashboard for Cloud Run service my-app (sahar-pfe)",
+  "schemaVersion": 36,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-3h", "to": "now" },
+  "timepicker": {},
+  "links": [],
+  "tags": ["cloud-run", "gcp"],
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Requests",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Request Rate (req/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/request_count",
+            "perSeriesAligner": "ALIGN_RATE",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["resource.labels.service_name"],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "5xx Error Rate (req/s)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 1 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/request_count",
+            "perSeriesAligner": "ALIGN_RATE",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["resource.labels.service_name"],
+            "filters": [
+              "metric.labels.response_code_class", "=", "5xx"
+            ],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "fixedColor": "red", "mode": "fixed" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 4,
+      "type": "row",
+      "title": "Latency",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "collapsed": false
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Request Latency p95 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/request_latencies",
+            "perSeriesAligner": "ALIGN_PERCENTILE_95",
+            "crossSeriesReducer": "REDUCE_MEAN",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["resource.labels.service_name"],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Request Latency p50 / p99 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "p50",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/request_latencies",
+            "perSeriesAligner": "ALIGN_PERCENTILE_50",
+            "crossSeriesReducer": "REDUCE_MEAN",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": [],
+            "filters": [],
+            "view": "FULL"
+          }
+        },
+        {
+          "refId": "p99",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/request_latencies",
+            "perSeriesAligner": "ALIGN_PERCENTILE_99",
+            "crossSeriesReducer": "REDUCE_MEAN",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": [],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Container Resources",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "collapsed": false
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "CPU Utilization (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/container/cpu/utilizations",
+            "perSeriesAligner": "ALIGN_MEAN",
+            "crossSeriesReducer": "REDUCE_MEAN",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["resource.labels.service_name"],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Memory Utilization (%)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/container/memory/utilizations",
+            "perSeriesAligner": "ALIGN_MEAN",
+            "crossSeriesReducer": "REDUCE_MEAN",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["resource.labels.service_name"],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.7 },
+              { "color": "red", "value": 0.9 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Instances",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Active Instance Count",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 28 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/container/instance_count",
+            "perSeriesAligner": "ALIGN_MEAN",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": [],
+            "filters": [
+              "metric.labels.state", "=", "active"
+            ],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto"
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Instance Count Over Time",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 28 },
+      "datasource": { "type": "stackdriver", "uid": "google-cloud-monitoring" },
+      "targets": [
+        {
+          "refId": "active",
+          "queryType": "metrics",
+          "metricQuery": {
+            "projectName": "sahar-pfe",
+            "metricType": "run.googleapis.com/container/instance_count",
+            "perSeriesAligner": "ALIGN_MEAN",
+            "crossSeriesReducer": "REDUCE_SUM",
+            "alignmentPeriod": "cloud-monitoring-auto",
+            "groupBys": ["metric.labels.state"],
+            "filters": [],
+            "view": "FULL"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepBefore",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["mean", "max"], "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      }
+    }
+  ]
+}

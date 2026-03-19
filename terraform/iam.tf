@@ -64,3 +64,25 @@ resource "google_service_account_iam_member" "wif_binding" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repo}"
 }
+
+# ─── Grafana Service Account ───────────────────────────────────────────────
+
+# Dedicated SA for the Grafana Cloud Run service
+resource "google_service_account" "grafana" {
+  account_id   = "grafana-cloud-run"
+  display_name = "Grafana Cloud Run"
+}
+
+# Grant Grafana SA read access to Cloud Monitoring metrics (used by GCM datasource via ADC)
+resource "google_project_iam_member" "grafana_monitoring_viewer" {
+  project = var.project_id
+  role    = "roles/monitoring.viewer"
+  member  = "serviceAccount:${google_service_account.grafana.email}"
+}
+
+# Allow the deployer SA to set the grafana SA on Cloud Run (required by gcloud run deploy)
+resource "google_service_account_iam_member" "act_as_grafana" {
+  service_account_id = google_service_account.grafana.name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${google_service_account.deployer.email}"
+}

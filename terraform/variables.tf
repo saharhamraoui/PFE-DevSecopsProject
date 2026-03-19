@@ -51,3 +51,10 @@ variable "wif_provider_id" {
   type        = string
   default     = "github-provider"
 }
+
+variable "grafana_admin_password" {
+  description = "Grafana admin user password (injected as env var into Cloud Run)"
+  type        = string
+  sensitive   = true
+  default     = "admin"
+}

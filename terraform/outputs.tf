@@ -17,3 +17,8 @@ output "wif_provider" {
   description = "Workload Identity Provider resource name (use as WIF_PROVIDER secret in GitHub)"
   value       = google_iam_workload_identity_pool_provider.github.name
 }
+
+output "grafana_url" {
+  description = "Public URL of Grafana on Cloud Run"
+  value       = google_cloud_run_v2_service.grafana.uri
+}
