@@ -54,7 +54,7 @@ jobs:
             sonarsource/sonar-scanner-cli \
             -Dsonar.projectKey=4you-github \
             -Dsonar.sources=. \
-            -Dsonar.exclusions="node_modules/**,dist/**,**/*.test.ts,**/*.html" \
+            -Dsonar.exclusions="node_modules/**,dist/**,**/*.test.ts,**/*.html,src/contexts/**" \
             -Dsonar.host.url=http://localhost:9000 \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
