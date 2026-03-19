@@ -70,10 +70,35 @@ jobs:
       - run: npm install
       - run: npm audit --audit-level=critical
 
+  owasp:
+    name: OWASP Dependency Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: '4you-github'
+          path: '.'
+          format: 'HTML'
+          args: >
+            --enableRetired
+            --exclude "**/node_modules/**"
+            --nvdApiKey ${{ secrets.NVD_API_KEY }}
+
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: owasp-dependency-check-report
+          path: reports/dependency-check-report.html
+          retention-days: 30
+
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: [lint, test, security]
+    needs: [lint, test, security, owasp]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
