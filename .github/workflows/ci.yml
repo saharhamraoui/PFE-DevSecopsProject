@@ -122,6 +122,9 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Authenticate Docker to Artifact Registry
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
@@ -131,6 +134,8 @@ jobs:
           context: .
           push: false
           load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
@@ -149,6 +154,7 @@ jobs:
         with:
           context: .
           push: true
+          cache-from: type=gha
           tags: |
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
@@ -156,7 +162,7 @@ jobs:
   deploy:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: zap-scan
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     environment: production
     permissions:
@@ -187,6 +193,45 @@ jobs:
             --service-account 94773365692-compute@developer.gserviceaccount.com
 
   # ────────────────────────────────────────────────────────────────────────
+  # Staging — deploy to Cloud Run staging for ZAP scan before production
+  # ────────────────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Cloud Run (Staging)
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to GCP via Workload Identity Federation
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (Staging)
+        id: deploy
+        run: |
+          gcloud run deploy my-app-staging \
+            --image us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }} \
+            --platform managed \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --service-account 94773365692-compute@developer.gserviceaccount.com
+          URL=$(gcloud run services describe my-app-staging \
+            --platform managed --region us-central1 \
+            --format 'value(status.url)')
+          echo "url=$URL" >> $GITHUB_OUTPUT
+
+  # ────────────────────────────────────────────────────────────────────────
   # Grafana — build, push, and deploy to Cloud Run
   # ────────────────────────────────────────────────────────────────────────
   build-push-grafana:
@@ -209,6 +254,9 @@ jobs:
       - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Authenticate Docker to Artifact Registry
         run: gcloud auth configure-docker us-central1-docker.pkg.dev
 
@@ -217,6 +265,8 @@ jobs:
         with:
           context: grafana
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/grafana:${{ github.sha }}
             us-central1-docker.pkg.dev/sahar-pfe/my-repo/grafana:latest
@@ -262,17 +312,16 @@ jobs:
   zap-scan:
     name: OWASP ZAP Scan
     runs-on: ubuntu-latest
-    needs: deploy
-    timeout-minutes: 10
+    needs: deploy-staging
+    timeout-minutes: 20
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.12.0
+      - name: Run OWASP ZAP Full Scan (Staging)
+        uses: zaproxy/action-full-scan@v0.10.0
         with:
-          target: ${{ env.APP_URL }}
-          rules_file_name: '.zap/rules.tsv'
+          target: ${{ needs.deploy-staging.outputs.url }}
           cmd_options: '-I'
 
       - name: Upload ZAP report
@@ -294,6 +343,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Login to ACR
         uses: docker/login-action@v3
         with:
@@ -306,6 +358,8 @@ jobs:
         with:
           context: .
           push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           tags: |
             saharacr.azurecr.io/my-app:${{ github.sha }}
             saharacr.azurecr.io/my-app:latest
@@ -332,9 +386,9 @@ jobs:
 
       - name: Deploy to AKS
         run: |
+          kubectl apply -f k8s/
           kubectl set image deployment/my-app \
-            my-app=saharacr.azurecr.io/my-app:${{ github.sha }} \
-            || kubectl apply -f k8s/
+            my-app=saharacr.azurecr.io/my-app:${{ github.sha }}
 
       - name: Verify deployment
         run: |
