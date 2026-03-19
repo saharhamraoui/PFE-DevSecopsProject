@@ -78,6 +78,8 @@ jobs:
 
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
+        env:
+          JAVA_HOME: /opt/jdk
         with:
           project: '4you-github'
           path: '.'
@@ -85,7 +87,6 @@ jobs:
           args: >
             --enableRetired
             --exclude "**/node_modules/**"
-            --nvdApiKey ${{ secrets.NVD_API_KEY }}
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
