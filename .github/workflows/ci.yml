@@ -50,10 +50,11 @@ jobs:
             --network=host \
             -v "$(pwd):/usr/src" \
             -v "$HOME/.sonar/cache:/opt/sonar-scanner/.sonar/cache" \
+            -e SONAR_SCANNER_OPTS="-Xmx512m" \
             sonarsource/sonar-scanner-cli \
             -Dsonar.projectKey=4you-github \
             -Dsonar.sources=. \
-            -Dsonar.exclusions="node_modules/**,dist/**,**/*.test.ts" \
+            -Dsonar.exclusions="node_modules/**,dist/**,**/*.test.ts,**/*.html" \
             -Dsonar.host.url=http://localhost:9000 \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
