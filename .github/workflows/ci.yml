@@ -87,6 +87,7 @@ jobs:
           args: >
             --enableRetired
             --exclude "**/node_modules/**"
+            --failOnCVSS 7
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
@@ -247,3 +248,30 @@ jobs:
             --max-instances 1 \
             --service-account grafana-cloud-run@sahar-pfe.iam.gserviceaccount.com \
             --set-env-vars GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }},GF_AUTH_ANONYMOUS_ENABLED=true,GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+
+  # ────────────────────────────────────────────────────────────────────────
+  # OWASP ZAP — Dynamic Application Security Testing (DAST)
+  # Scans the RUNNING app for vulnerabilities (XSS, SQLi, CSRF, etc.)
+  # ────────────────────────────────────────────────────────────────────────
+  zap-scan:
+    name: OWASP ZAP Scan
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: 'https://my-app-lpqw42tata-uc.a.run.app'
+          rules_file_name: '.zap/rules.tsv'
+          cmd_options: '-I'
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 30
