@@ -224,7 +224,7 @@
           "metricQuery": {
             "projectName": "sahar-pfe",
             "metricType": "run.googleapis.com/container/cpu/utilizations",
-            "perSeriesAligner": "ALIGN_MEAN",
+            "perSeriesAligner": "ALIGN_PERCENTILE_50",
             "crossSeriesReducer": "REDUCE_MEAN",
             "alignmentPeriod": "cloud-monitoring-auto",
             "groupBys": ["resource.labels.service_name"],
@@ -275,7 +275,7 @@
           "metricQuery": {
             "projectName": "sahar-pfe",
             "metricType": "run.googleapis.com/container/memory/utilizations",
-            "perSeriesAligner": "ALIGN_MEAN",
+            "perSeriesAligner": "ALIGN_PERCENTILE_50",
             "crossSeriesReducer": "REDUCE_MEAN",
             "alignmentPeriod": "cloud-monitoring-auto",
             "groupBys": ["resource.labels.service_name"],
