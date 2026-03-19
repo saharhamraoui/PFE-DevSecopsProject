@@ -86,3 +86,36 @@ resource "google_service_account_iam_member" "act_as_grafana" {
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${google_service_account.deployer.email}"
 }
+
+# ─── Google Secret Manager ─────────────────────────────────────────────────
+
+# Secret: Grafana admin password
+resource "google_secret_manager_secret" "grafana_password" {
+  secret_id = "grafana-admin-password"
+
+  replication {
+    auto {}
+  }
+
+  depends_on = [google_project_service.apis]
+}
+
+# Secret version — value comes from terraform variable (grafana_admin_password)
+resource "google_secret_manager_secret_version" "grafana_password" {
+  secret      = google_secret_manager_secret.grafana_password.id
+  secret_data = var.grafana_admin_password
+}
+
+# Grant Grafana Cloud Run SA access to read the secret at runtime
+resource "google_secret_manager_secret_iam_member" "grafana_sa_accessor" {
+  secret_id = google_secret_manager_secret.grafana_password.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.grafana.email}"
+}
+
+# Grant deployer SA access to reference the secret in Cloud Run deploy command
+resource "google_secret_manager_secret_iam_member" "deployer_sa_accessor" {
+  secret_id = google_secret_manager_secret.grafana_password.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.deployer.email}"
+}

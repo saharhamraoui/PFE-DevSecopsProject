@@ -303,7 +303,8 @@ jobs:
             --cpu 1 \
             --max-instances 1 \
             --service-account grafana-cloud-run@sahar-pfe.iam.gserviceaccount.com \
-            --set-env-vars GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }},GF_AUTH_ANONYMOUS_ENABLED=true,GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+            --update-secrets GF_SECURITY_ADMIN_PASSWORD=grafana-admin-password:latest \
+            --set-env-vars GF_AUTH_ANONYMOUS_ENABLED=true,GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
 
   # ────────────────────────────────────────────────────────────────────────
   # OWASP ZAP — Dynamic Application Security Testing (DAST)
