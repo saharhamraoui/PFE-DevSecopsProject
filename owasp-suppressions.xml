@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+        lodash GHSA-r5fr-rjxr-66jc (CVSS 8.1)
+        Transitive dependency only (not directly imported).
+        No patched version available as of April 2026.
+        Risk accepted — lodash is used for utility functions, not user input processing.
+    -->
+    <suppress>
+        <notes>lodash GHSA-r5fr-rjxr-66jc - no fixed version available (2026 CVE), transitive dep only</notes>
+        <packageUrl regex="true">^pkg:npm/lodash@.*$</packageUrl>
+        <vulnerabilityName>GHSA-r5fr-rjxr-66jc</vulnerabilityName>
+    </suppress>
+
+    <!--
+        picomatch CVE-2026-33671 (CVSS 7.5) — affects 2.3.1 and 4.0.3
+        picomatch GHSA-c2c7-rcm5-vvqj (CVSS 7.5)
+        Transitive dependency (used by Vite/Vitest internally for glob matching).
+        No patched version available as of April 2026.
+        Risk accepted — only used at build/test time, not in production runtime.
+    -->
+    <suppress>
+        <notes>picomatch CVE-2026-33671 - no fixed version available (2026 CVE), build-time dep only</notes>
+        <packageUrl regex="true">^pkg:npm/picomatch@.*$</packageUrl>
+        <vulnerabilityName>CVE-2026-33671</vulnerabilityName>
+    </suppress>
+    <suppress>
+        <notes>picomatch GHSA-c2c7-rcm5-vvqj - no fixed version available (2026 CVE), build-time dep only</notes>
+        <packageUrl regex="true">^pkg:npm/picomatch@.*$</packageUrl>
+        <vulnerabilityName>GHSA-c2c7-rcm5-vvqj</vulnerabilityName>
+    </suppress>
+
+</suppressions>

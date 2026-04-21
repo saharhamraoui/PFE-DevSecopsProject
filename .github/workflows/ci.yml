@@ -93,6 +93,7 @@ jobs:
             --enableRetired
             --exclude "**/node_modules/**"
             --failOnCVSS 7
+            --suppression owasp-suppressions.xml
 
       - name: Upload OWASP report
         uses: actions/upload-artifact@v4
