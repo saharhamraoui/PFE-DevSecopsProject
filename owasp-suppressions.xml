@@ -31,4 +31,39 @@
         <vulnerabilityName>GHSA-c2c7-rcm5-vvqj</vulnerabilityName>
     </suppress>
 
+    <!--
+        brace-expansion CVE-2026-33750 (CVSS 7.5)
+        Transitive dependency pulled in by minimatch/glob (build toolchain only).
+        Not used at runtime. No patched 1.x version available as of May 2026.
+    -->
+    <suppress>
+        <notes>brace-expansion CVE-2026-33750 - transitive build-time dep, no patched 1.x version available</notes>
+        <packageUrl regex="true">^pkg:npm/brace-expansion@.*$</packageUrl>
+        <vulnerabilityName>CVE-2026-33750</vulnerabilityName>
+    </suppress>
+
+    <!--
+        lodash CVE-2026-4800 (CVSS 9.8)
+        Transitive dependency only (not directly imported in application code).
+        No patched version available as of May 2026.
+        Risk accepted — not exposed to user input directly.
+    -->
+    <suppress>
+        <notes>lodash CVE-2026-4800 - transitive dep only, no fixed version available (May 2026)</notes>
+        <packageUrl regex="true">^pkg:npm/lodash@.*$</packageUrl>
+        <vulnerabilityName>CVE-2026-4800</vulnerabilityName>
+    </suppress>
+
+    <!--
+        ws CVE-2026-45736 (CVSS 7.5)
+        Transitive dependency (pulled in by Vite HMR / dev toolchain).
+        Not present in the production Docker image runtime.
+        No patched version of ws@8 available as of May 2026.
+    -->
+    <suppress>
+        <notes>ws CVE-2026-45736 - transitive dev/build dep only, no patched ws@8 version available (May 2026)</notes>
+        <packageUrl regex="true">^pkg:npm/ws@.*$</packageUrl>
+        <vulnerabilityName>CVE-2026-45736</vulnerabilityName>
+    </suppress>
+
 </suppressions>
