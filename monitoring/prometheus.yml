@@ -8,10 +8,8 @@ scrape_configs:
     static_configs:
       - targets: ["localhost:9090"]
 
-  # Scrape GCP Cloud Run metrics via stackdriver_exporter
-  - job_name: cloud_run
+  # Scrape the application (adjust target to app's metrics endpoint)
+  - job_name: app
     static_configs:
-      - targets: ["172.17.0.1:9255"]
+      - targets: ["host.docker.internal:80"]
     metrics_path: /metrics
-    params:
-      google.project-id: ["sahar-pfe"]

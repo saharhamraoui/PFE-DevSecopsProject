@@ -1,22 +1,10 @@
-name: monitoring-github
+# NOTE: Production monitoring is deployed on AKS via Helm (kube-prometheus-stack).
+# This docker-compose is for local development only.
+# See README.md for AKS production access instructions.
+
+name: monitoring-local
 
 services:
-  # Stackdriver exporter: pulls GCP Cloud Run metrics into Prometheus
-  stackdriver-exporter:
-    image: prometheuscommunity/stackdriver-exporter:latest
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/credentials/gcp-key.json
-      - GOOGLE_PROJECT_ID=sahar-pfe
-    volumes:
-      - /home/sahar/gcp-key-github.json:/credentials/gcp-key.json:ro
-    ports:
-      - "9255:9255"
-    command:
-      - "--google.project-id=sahar-pfe"
-      - "--monitoring.metrics-type-prefixes=run.googleapis.com"
-      - "--monitoring.drop-delegated-projects"
-    restart: unless-stopped
-
   prometheus:
     image: prom/prometheus:latest
     user: root
@@ -29,8 +17,6 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=7d"
     restart: unless-stopped
-    depends_on:
-      - stackdriver-exporter
 
   grafana:
     image: grafana/grafana:latest
