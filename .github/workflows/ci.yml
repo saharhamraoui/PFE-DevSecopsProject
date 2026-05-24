@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+﻿name: CI/CD Pipeline
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: ${{ github.repository }}
-  APP_URL: https://my-app-lpqw42tata-uc.a.run.app
+  ACR_REGISTRY: saharacr.azurecr.io
+  APP_IMAGE: saharacr.azurecr.io/my-app
 
 jobs:
   lint:
@@ -104,33 +104,28 @@ jobs:
           path: reports/dependency-check-report.html
           retention-days: 30
 
-  build-and-push:
-    name: Build & Push Docker Image
+  # ────────────────────────────────────────────────────────────────────────
+  # Build Docker image, scan with Trivy, push to Azure Container Registry
+  # ────────────────────────────────────────────────────────────────────────
+  build-push-acr:
+    name: Build, Scan & Push to Azure ACR
     runs-on: ubuntu-latest
     needs: [lint, test, security, owasp]
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      id-token: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
+      - name: Login to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Build Docker image (local)
+      - name: Build Docker image (local, for scanning)
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -139,238 +134,33 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
+            ${{ env.APP_IMAGE }}:${{ github.sha }}
+            ${{ env.APP_IMAGE }}:latest
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
+          image-ref: ${{ env.APP_IMAGE }}:${{ github.sha }}
           format: table
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-      - name: Push Docker image to Artifact Registry
+      - name: Push image to ACR
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
           cache-from: type=gha
           tags: |
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }}
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest
-
-  deploy:
-    name: Deploy to Cloud Run
-    runs-on: ubuntu-latest
-    needs: zap-scan
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    environment: production
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      # 1️⃣ Authenticate to GCP via Workload Identity Federation
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      # 2️⃣ Set up Google Cloud SDK
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      # 3️⃣ Deploy to Cloud Run
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy my-app \
-            --image us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:latest \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated \
-            --service-account 94773365692-compute@developer.gserviceaccount.com
+            ${{ env.APP_IMAGE }}:${{ github.sha }}
+            ${{ env.APP_IMAGE }}:latest
 
   # ────────────────────────────────────────────────────────────────────────
-  # Staging — deploy to Cloud Run staging for ZAP scan before production
+  # Update the GitOps repo — ArgoCD detects the change and syncs to AKS
   # ────────────────────────────────────────────────────────────────────────
-  deploy-staging:
-    name: Deploy to Cloud Run (Staging)
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      id-token: write
-    outputs:
-      url: ${{ steps.deploy.outputs.url }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy to Cloud Run (Staging)
-        id: deploy
-        run: |
-          gcloud run deploy my-app-staging \
-            --image us-central1-docker.pkg.dev/sahar-pfe/my-repo/my-app:${{ github.sha }} \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated \
-            --service-account 94773365692-compute@developer.gserviceaccount.com
-          URL=$(gcloud run services describe my-app-staging \
-            --platform managed --region us-central1 \
-            --format 'value(status.url)')
-          echo "url=$URL" >> $GITHUB_OUTPUT
-
-  # ────────────────────────────────────────────────────────────────────────
-  # Grafana — build, push, and deploy to Cloud Run
-  # ────────────────────────────────────────────────────────────────────────
-  build-push-grafana:
-    name: Build & Push Grafana Image
-    runs-on: ubuntu-latest
-    needs: [lint, test, security]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Authenticate Docker to Artifact Registry
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      - name: Build and push Grafana image
-        uses: docker/build-push-action@v5
-        with:
-          context: grafana
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/grafana:${{ github.sha }}
-            us-central1-docker.pkg.dev/sahar-pfe/my-repo/grafana:latest
-
-  deploy-grafana:
-    name: Deploy Grafana to Cloud Run
-    runs-on: ubuntu-latest
-    needs: build-push-grafana
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to GCP via Workload Identity Federation
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.GCP_SA_EMAIL }}
-
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Deploy Grafana to Cloud Run
-        run: |
-          gcloud run deploy grafana \
-            --image us-central1-docker.pkg.dev/sahar-pfe/my-repo/grafana:latest \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated \
-            --port 3000 \
-            --memory 512Mi \
-            --cpu 1 \
-            --max-instances 1 \
-            --service-account grafana-cloud-run@sahar-pfe.iam.gserviceaccount.com \
-            --update-secrets GF_SECURITY_ADMIN_PASSWORD=grafana-admin-password:latest \
-            --set-env-vars GF_AUTH_ANONYMOUS_ENABLED=true,GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-
-  # ────────────────────────────────────────────────────────────────────────
-  # OWASP ZAP — Dynamic Application Security Testing (DAST)
-  # Scans the RUNNING app for vulnerabilities (XSS, SQLi, CSRF, etc.)
-  # ────────────────────────────────────────────────────────────────────────
-  zap-scan:
-    name: OWASP ZAP Scan
-    runs-on: ubuntu-latest
-    needs: deploy-staging
-    timeout-minutes: 30
-    permissions:
-      issues: write
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run OWASP ZAP Baseline Scan (Staging)
-        uses: zaproxy/action-baseline@v0.14.0
-        with:
-          target: ${{ needs.deploy-staging.outputs.url }}
-          fail_action: false
-
-      - name: Upload ZAP report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: zap-report
-          path: report_html.html
-          retention-days: 30
-
-  # ────────────────────────────────────────────────────────────────────────
-  # AKS — Build, push to ACR, then update GitOps repo (ArgoCD picks it up)
-  # ────────────────────────────────────────────────────────────────────────
-  build-push-acr:
-    name: Build & Push to Azure ACR
-    runs-on: ubuntu-latest
-    needs: [lint, test, security, owasp]
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to ACR
-        uses: docker/login-action@v3
-        with:
-          registry: saharacr.azurecr.io
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and push to ACR
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: |
-            saharacr.azurecr.io/my-app:${{ github.sha }}
-            saharacr.azurecr.io/my-app:latest
-
   update-gitops:
-    name: Update GitOps Repo (ArgoCD)
+    name: Update GitOps Repo (ArgoCD -> AKS)
     runs-on: ubuntu-latest
     needs: build-push-acr
     if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
@@ -384,7 +174,7 @@ jobs:
 
       - name: Update image tag in deployment.yaml
         run: |
-          sed -i "s|saharacr.azurecr.io/my-app:.*|saharacr.azurecr.io/my-app:${{ github.sha }}|" \
+          sed -i "s|${{ env.APP_IMAGE }}:.*|${{ env.APP_IMAGE }}:${{ github.sha }}|" \
             gitops/k8s/deployment.yaml
 
       - name: Commit and push to GitOps repo
@@ -395,3 +185,37 @@ jobs:
           git add k8s/deployment.yaml
           git commit -m "chore: update my-app image to ${{ github.sha }}" || echo "No changes"
           git push
+
+  # ────────────────────────────────────────────────────────────────────────
+  # OWASP ZAP — DAST scan against the running app on AKS
+  # Set AKS_APP_URL variable to your AKS ingress external IP / hostname
+  # ────────────────────────────────────────────────────────────────────────
+  zap-scan:
+    name: OWASP ZAP Scan (AKS)
+    runs-on: ubuntu-latest
+    needs: update-gitops
+    timeout-minutes: 30
+    permissions:
+      issues: write
+    if: |
+      ((github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch') &&
+      vars.AKS_APP_URL != ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Wait for ArgoCD sync
+        run: sleep 60
+
+      - name: Run OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ vars.AKS_APP_URL }}
+          fail_action: false
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 30
