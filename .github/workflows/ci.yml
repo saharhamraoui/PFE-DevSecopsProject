@@ -142,9 +142,8 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.APP_IMAGE }}:${{ github.sha }}
-          format: template
-          template: '@/contrib/html.tpl'
-          output: trivy-report.html
+          format: json
+          output: trivy-report.json
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
@@ -154,7 +153,7 @@ jobs:
         if: always()
         with:
           name: trivy-report
-          path: trivy-report.html
+          path: trivy-report.json
           retention-days: 14
 
       # Push the exact image that was scanned — no rebuild
