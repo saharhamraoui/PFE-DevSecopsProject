@@ -42,7 +42,7 @@ jobs:
       - run: npm test
 
   sonarcloud:
-    name: SonarCloud Analysis
+    name: SonarCloud Analysis | SAST
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
