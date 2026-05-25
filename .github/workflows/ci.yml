@@ -142,7 +142,8 @@ jobs:
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.APP_IMAGE }}:${{ github.sha }}
-          format: html
+          format: template
+          template: '@/contrib/html.tpl'
           output: trivy-report.html
           exit-code: 1
           ignore-unfixed: true
