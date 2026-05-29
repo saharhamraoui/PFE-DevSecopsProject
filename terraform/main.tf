@@ -1,135 +1,127 @@
 terraform {
-  required_version = ">= 1.5"
+
   required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 4.1.0"
     }
+  }
+
+}
+
+
+provider "azurerm" {
+  tenant_id       = var.tenant_id
+  subscription_id = var.subscription_id
+
+  features {}
+}
+
+
+//Sahar
+resource "azurerm_resource_group" "saharRg" {
+  name     = "sahar-rg"
+  location = "East US"
+}
+
+// Azure Container Registry
+resource "azurerm_container_registry" "acr" {
+  name                = var.acr_name
+  resource_group_name = azurerm_resource_group.saharRg.name
+  location            = azurerm_resource_group.saharRg.location
+  sku                 = "Basic"
+  admin_enabled       = true
+}
+
+// Get current Terraform operator identity (needed for Key Vault access policy)
+data "azurerm_client_config" "current" {}
+
+// Azure Key Vault — centralized secrets management for AKS workloads
+resource "azurerm_key_vault" "kv" {
+  name                = var.key_vault_name
+  location            = azurerm_resource_group.saharRg.location
+  resource_group_name = azurerm_resource_group.saharRg.name
+  tenant_id           = var.tenant_id
+  sku_name            = "standard"
+
+  # Allow Terraform operator (current user) to manage secrets
+  access_policy {
+    tenant_id = var.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    secret_permissions = ["Get", "List", "Set", "Delete", "Recover", "Purge"]
+  }
+
+  # Allow AKS kubelet identity to read secrets via CSI driver
+  access_policy {
+    tenant_id = var.tenant_id
+    object_id = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+
+    secret_permissions = ["Get", "List"]
+  }
+
+  depends_on = [azurerm_kubernetes_cluster.aks]
+}
+
+// Store ACR credentials in Key Vault (no longer needed in plain env vars)
+resource "azurerm_key_vault_secret" "acr_password" {
+  name         = "acr-password"
+  value        = var.acr_admin_password
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_key_vault.kv]
+}
+
+// AKS Cluster
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = var.aks_cluster_name
+  location            = azurerm_resource_group.saharRg.location
+  resource_group_name = azurerm_resource_group.saharRg.name
+  dns_prefix          = var.aks_dns_prefix
+  kubernetes_version  = "1.33"
+
+  default_node_pool {
+    name       = "default"
+    node_count = var.aks_node_count
+    vm_size    = "Standard_D2s_v3"
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  # Enable Azure Key Vault CSI Secrets Store driver
+  key_vault_secrets_provider {
+    secret_rotation_enabled = true
+  }
+
+  tags = {
+    Environment = "dev"
+    Project     = "pfe-devops"
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.region
+// Attach ACR to AKS so the cluster can pull images
+resource "azurerm_role_assignment" "aks_acr_pull" {
+  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.acr.id
+  skip_service_principal_aad_check = true
+
+  depends_on = [azurerm_kubernetes_cluster.aks]
 }
 
-# Enable required APIs
-resource "google_project_service" "apis" {
-  for_each = toset([
-    "run.googleapis.com",
-    "artifactregistry.googleapis.com",
-    "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "secretmanager.googleapis.com",
-  ])
-  service            = each.value
-  disable_on_destroy = false
+// Outputs
+output "acr_login_server" {
+  value = azurerm_container_registry.acr.login_server
 }
 
-# Artifact Registry repository
-resource "google_artifact_registry_repository" "repo" {
-  repository_id = var.artifact_registry_repo
-  location      = var.region
-  format        = "DOCKER"
-  description   = "Docker images for ${var.app_name}"
-
-  depends_on = [google_project_service.apis]
+output "aks_kube_config" {
+  value     = azurerm_kubernetes_cluster.aks.kube_config_raw
+  sensitive = true
 }
 
-# Cloud Run service
-resource "google_cloud_run_v2_service" "app" {
-  name     = var.app_name
-  location = var.region
-
-  template {
-    containers {
-      image = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repo}/${var.app_name}:latest"
-
-      ports {
-        container_port = 8080
-      }
-
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
-        }
-      }
-    }
-
-    scaling {
-      min_instance_count = 1
-      max_instance_count = 3
-    }
-
-    service_account = google_service_account.deployer.email
-  }
-
-  depends_on = [google_project_service.apis]
+output "key_vault_uri" {
+  value = azurerm_key_vault.kv.vault_uri
 }
 
-# Allow unauthenticated access to Cloud Run
-resource "google_cloud_run_v2_service_iam_member" "public" {
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.app.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
-
-# ─── Grafana Cloud Run Service ─────────────────────────────────────────────
-
-resource "google_cloud_run_v2_service" "grafana" {
-  name     = "grafana"
-  location = var.region
-
-  template {
-    containers {
-      # Placeholder image used only on first terraform apply.
-      # The CI/CD pipeline replaces this with the real Grafana image on every deploy.
-      image = "us-docker.pkg.dev/cloudrun/container/hello"
-
-      # Grafana listens on 3000 by default
-      ports {
-        container_port = 3000
-      }
-
-      # Admin password injected at deploy time (override via GF_SECURITY_ADMIN_PASSWORD)
-      env {
-        name  = "GF_SECURITY_ADMIN_PASSWORD"
-        value = var.grafana_admin_password
-      }
-
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
-        }
-      }
-    }
-
-    scaling {
-      min_instance_count = 0
-      max_instance_count = 1
-    }
-
-    # Dedicated SA with monitoring.viewer — provides ADC for the Cloud Monitoring datasource
-    service_account = google_service_account.grafana.email
-  }
-
-  depends_on = [google_project_service.apis]
-
-  # Ignore image changes — the CI/CD pipeline owns the image tag after first deploy
-  lifecycle {
-    ignore_changes = [template[0].containers[0].image]
-  }
-}
-
-# Allow unauthenticated access to Grafana (login required for admin)
-resource "google_cloud_run_v2_service_iam_member" "grafana_public" {
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.grafana.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}

@@ -1,60 +1,44 @@
-variable "project_id" {
-  description = "GCP project ID"
-  type        = string
-  default     = "sahar-pfe"
+variable "tenant_id" {
+  type = string
 }
 
-variable "project_number" {
-  description = "GCP project number"
-  type        = string
-  default     = "94773365692"
+variable "subscription_id" {
+  type = string
 }
 
-variable "region" {
-  description = "GCP region"
+variable "acr_name" {
   type        = string
-  default     = "us-central1"
+  description = "Name of the Azure Container Registry (must be globally unique, alphanumeric only)"
+  default     = "saharacr"
 }
 
-variable "app_name" {
-  description = "Cloud Run service name"
+variable "aks_cluster_name" {
   type        = string
-  default     = "my-app"
+  description = "Name of the AKS cluster"
+  default     = "sahar-aks"
 }
 
-variable "artifact_registry_repo" {
-  description = "Artifact Registry repository name"
+variable "aks_dns_prefix" {
   type        = string
-  default     = "my-repo"
+  description = "DNS prefix for the AKS cluster"
+  default     = "saharaks"
 }
 
-variable "service_account_name" {
-  description = "Service account name for deployments"
-  type        = string
-  default     = "cloud-run-deployer"
+variable "aks_node_count" {
+  type        = number
+  description = "Number of nodes in the AKS default node pool"
+  default     = 1
 }
 
-variable "github_repo" {
-  description = "GitHub repository in owner/repo format"
+variable "key_vault_name" {
   type        = string
-  default     = "saharhamraoui/login-page-replicator"
+  description = "Name of the Azure Key Vault (globally unique, 3-24 alphanumeric chars)"
+  default     = "sahar-kv-pfe"
 }
 
-variable "wif_pool_id" {
-  description = "Workload Identity Pool ID"
+variable "acr_admin_password" {
   type        = string
-  default     = "github-pool"
-}
-
-variable "wif_provider_id" {
-  description = "Workload Identity Provider ID"
-  type        = string
-  default     = "github-provider"
-}
-
-variable "grafana_admin_password" {
-  description = "Grafana admin user password (injected as env var into Cloud Run)"
-  type        = string
+  description = "ACR admin password — stored in Key Vault (sensitive)"
   sensitive   = true
-  default     = "admin"
+  default     = ""
 }
