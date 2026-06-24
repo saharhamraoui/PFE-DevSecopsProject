@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  ACR_REGISTRY: saharacrpfe2026.azurecr.io
-  APP_IMAGE: saharacrpfe2026.azurecr.io/pfe-app
+  ACR_REGISTRY: saharacr.azurecr.io
+  APP_IMAGE: saharacr.azurecr.io/pfe-app
 
 jobs:
 
