@@ -138,6 +138,10 @@ jobs:
             ${{ env.APP_IMAGE }}:${{ github.sha }}
             ${{ env.APP_IMAGE }}:latest
 
+      - name: Download Trivy HTML template
+        run: |
+         curl -sSL -o html.tpl https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -148,6 +152,8 @@ jobs:
           exit-code: 1
           ignore-unfixed: true
           severity: CRITICAL,HIGH
+
+          
 
       - name: Upload Trivy report
         uses: actions/upload-artifact@v4
