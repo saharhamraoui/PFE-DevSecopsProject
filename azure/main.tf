@@ -78,12 +78,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   location            = azurerm_resource_group.saharRg.location
   resource_group_name = azurerm_resource_group.saharRg.name
   dns_prefix          = var.aks_dns_prefix
-  kubernetes_version  = "1.32"
 
   default_node_pool {
     name       = "default"
     node_count = var.aks_node_count
-    vm_size    = "Standard_B2s"
+    vm_size    = "Standard_D2s_v3"
   }
 
   identity {

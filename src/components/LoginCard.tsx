@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import { SopraLogo } from "@/components/SopraLogo";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -9,10 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeOff, Lock } from "lucide-react";
-import { SopraLogo } from "@/components/SopraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff, Lock } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export const LoginCard = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +50,7 @@ export const LoginCard = () => {
             4YOU
           </div>
           <p className="text-lg text-card-foreground">
-            <span className="font-semibold">Bienvenue Sahar sur 4YOU,</span>{" "}
+            <span className="font-semibold">Bienvenue Sahar et dorsaf sur 4YOU,</span>{" "}
             connectez-vous pour accéder à votre espace.
           </p>
         </div>
