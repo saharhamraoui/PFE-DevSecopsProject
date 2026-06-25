@@ -153,14 +153,29 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-          
-
       - name: Upload Trivy report
         uses: actions/upload-artifact@v4
         if: always()
         with:
           name: trivy-report
           path: trivy-report.html
+          retention-days: 14
+
+      - name: Scan Dockerfile and IaC misconfigurations
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: '.'
+          format: template
+          template: '@html.tpl'
+          output: trivy-config-report.html
+
+      - name: Upload Trivy config report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-config-report
+          path: trivy-config-report.html
           retention-days: 14
 
 
