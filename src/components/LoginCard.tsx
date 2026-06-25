@@ -50,7 +50,7 @@ export const LoginCard = () => {
             4YOU
           </div>
           <p className="text-lg text-card-foreground">
-            <span className="font-semibold">This is a demo video,</span>{" "}
+            <span className="font-semibold">This is a demo videoooo,</span>{" "}
             connectez-vous pour accéder à votre espace.
           </p>
         </div>
